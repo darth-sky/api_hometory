@@ -10,6 +10,7 @@ from api.data_protected.endpoints import protected_endpoints
 from api.ruangan.endpoints import ruangan_endpoints
 from api.container.endpoints import container_endpoints
 from api.barang_dlm_ruangan.endpoints import barang_dlm_ruangan_endpoints
+from api.barang_dlm_container.endpoints import barang_dlm_container_endpoints
 from config import Config
 from static.static_file_server import static_file_server
 
@@ -31,6 +32,7 @@ app.register_blueprint(books_endpoints, url_prefix='/api/v1/books')
 app.register_blueprint(static_file_server, url_prefix='/static/')
 app.register_blueprint(ruangan_endpoints, url_prefix='/api/v1/ruangan')
 app.register_blueprint(barang_dlm_ruangan_endpoints, url_prefix='/api/v1/barang_dlm_ruangan')
+app.register_blueprint(barang_dlm_container_endpoints, url_prefix='/api/v1/barang_dlm_container')
 app.register_blueprint(container_endpoints, url_prefix='/api/v1/container')
 
 
