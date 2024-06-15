@@ -8,17 +8,85 @@ barang_dlm_container_endpoints = Blueprint('barang_dlm_container', __name__)
 UPLOAD_FOLDER = "img"
 
 
+# @barang_dlm_container_endpoints.route('/read', methods=['GET'])
+# def read():
+#     """Routes for module get list books"""
+#     connection = get_connection()
+#     cursor = connection.cursor(dictionary=True)
+#     select_query = "SELECT * FROM barang_dlm_container"
+#     cursor.execute(select_query)
+#     results = cursor.fetchall()
+#     cursor.close()  # Close the cursor after query execution
+#     connection.close()
+#     return jsonify({"message": "OK", "datas": results}), 200
+
 @barang_dlm_container_endpoints.route('/read', methods=['GET'])
 def read():
-    """Routes for module get list books"""
-    connection = get_connection()
-    cursor = connection.cursor(dictionary=True)
-    select_query = "SELECT * FROM barang_dlm_container"
-    cursor.execute(select_query)
-    results = cursor.fetchall()
-    cursor.close()  # Close the cursor after query execution
-    connection.close()
-    return jsonify({"message": "OK", "datas": results}), 200
+    try:
+        # Ambil parameter page dan search dari query string
+        page = int(request.args.get('page', 1))
+        search = request.args.get('search', '')
+        per_page = 5  # Tetapkan jumlah item per halaman
+
+        # Hitung offset
+        offset = (page - 1) * per_page
+
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        if search:
+            # Jika ada parameter search, tambahkan kondisi WHERE dengan LIKE
+            search_param = f"%{search}%"
+            count_query = """
+                SELECT COUNT(*) AS total 
+                FROM barang_dlm_container 
+                WHERE nama_barang_dlm_container LIKE %s
+            """
+            cursor.execute(count_query, (search_param,))
+            total_items = cursor.fetchone()['total']
+
+            query = """
+                SELECT *
+                FROM barang_dlm_container
+                WHERE nama_barang_dlm_container LIKE %s
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(query, (search_param, per_page, offset))
+        else:
+            # Jika tidak ada parameter search, ambil semua data tanpa kondisi WHERE
+            count_query = "SELECT COUNT(*) AS total FROM barang_dlm_container"
+            cursor.execute(count_query)
+            total_items = cursor.fetchone()['total']
+
+            query = """
+                SELECT *
+                FROM barang_dlm_container
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(query, (per_page, offset))
+
+        results = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        total_pages = (total_items + per_page - 1) // per_page  # Hitung total halaman
+
+        return jsonify({
+            "message": "OK",
+            "datas": results,
+            "pagination": {
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "current_page": page,
+                "per_page": per_page
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "message": "Failed to fetch data",
+            "error": str(e)
+        }), 500
 
 @barang_dlm_container_endpoints.route('/read/<id_container>', methods=['GET'])
 def readid(id_container):
@@ -87,8 +155,8 @@ def update(id_barang_dlm_container):
         connection = get_connection()
         cursor = connection.cursor()
 
-        update_query = "UPDATE barang_dlm_container SET nama_barang_dlm_container=%s, gambar_barang_dlm_container=%s WHERE id_barang_dlm_container=%s"
-        update_request = (nama_barang_dlm_container, uploaded_file.filename, id_barang_dlm_container)
+        update_query = "UPDATE barang_dlm_container SET nama_barang_dlm_container=%s, desc_barang_dlm_container=%s, qnty_barang_dlm_ruangan=%s, gambar_barang_dlm_container=%s WHERE id_barang_dlm_container=%s"
+        update_request = (nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename, id_barang_dlm_container)
         cursor.execute(update_query, update_request)
         connection.commit()
         cursor.close()

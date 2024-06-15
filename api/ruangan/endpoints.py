@@ -62,7 +62,7 @@ def delete(id_ruangan):
     }), 200
 
 
-@ruangan_endpoints.route('/update/<id_ruangan>', methods=['PUT'])
+@ruangan_endpoints.route('/update/<id_ruangan>', methods=['POST'])
 def update(id_ruangan):
     """Routes for module update a book"""
     nama_ruangan = request.form['nama_ruangan']
