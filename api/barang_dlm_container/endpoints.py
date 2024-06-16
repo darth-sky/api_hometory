@@ -108,6 +108,7 @@ def create():
     nama_barang_dlm_container = request.form['nama_barang_dlm_container']
     desc_barang_dlm_container = request.form['desc_barang_dlm_container']
     qnty_barang_dlm_container = request.form['qnty_barang_dlm_container']
+    category_barang_dlm_container = request.form['category_barang_dlm_container']
 
     uploaded_file = request.files['gambar_barang_dlm_container']
     if uploaded_file.filename != '':
@@ -116,8 +117,8 @@ def create():
 
         connection = get_connection()
         cursor = connection.cursor()
-        insert_query = "INSERT INTO barang_dlm_container (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, gambar_barang_dlm_container) VALUES (%s, %s, %s, %s, %s)"
-        request_insert = (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename)
+        insert_query = "INSERT INTO barang_dlm_container (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, gambar_barang_dlm_container, category_barang_dlm_container) VALUES (%s, %s, %s, %s, %s, %s)"
+        request_insert = (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename, category_barang_dlm_container)
         cursor.execute(insert_query, request_insert)
         connection.commit()  # Commit changes to the database
         cursor.close()
@@ -140,12 +141,13 @@ def delete(id_barang_dlm_container):
     }), 200
 
 
-@barang_dlm_container_endpoints.route('/update/<id_barang_dlm_container>', methods=['PUT'])
+@barang_dlm_container_endpoints.route('/update/<id_barang_dlm_container>', methods=['POST'])
 def update(id_barang_dlm_container):
     """Routes for module update a book"""
     nama_barang_dlm_container = request.form['nama_barang_dlm_container']
     desc_barang_dlm_container = request.form['desc_barang_dlm_container']
     qnty_barang_dlm_container = request.form['qnty_barang_dlm_container']
+    category_barang_dlm_container = request.form['category_barang_dlm_container']
 
     uploaded_file = request.files['gambar_barang_dlm_container']
     if uploaded_file.filename != '':
@@ -155,8 +157,8 @@ def update(id_barang_dlm_container):
         connection = get_connection()
         cursor = connection.cursor()
 
-        update_query = "UPDATE barang_dlm_container SET nama_barang_dlm_container=%s, desc_barang_dlm_container=%s, qnty_barang_dlm_ruangan=%s, gambar_barang_dlm_container=%s WHERE id_barang_dlm_container=%s"
-        update_request = (nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename, id_barang_dlm_container)
+        update_query = "UPDATE barang_dlm_container SET nama_barang_dlm_container=%s, desc_barang_dlm_container=%s, qnty_barang_dlm_container=%s, gambar_barang_dlm_container=%s, category_barang_dlm_container=%s WHERE id_barang_dlm_container=%s"
+        update_request = (nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename, category_barang_dlm_container, id_barang_dlm_container)
         cursor.execute(update_query, update_request)
         connection.commit()
         cursor.close()

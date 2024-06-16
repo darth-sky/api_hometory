@@ -72,7 +72,7 @@ def delete(id_container):
     }), 200
 
 
-@container_endpoints.route('/update/<id_container>', methods=['PUT'])
+@container_endpoints.route('/update/<id_container>', methods=['POST'])
 def update(id_container):
     """Routes for module update a book"""
     nama_container = request.form['nama_container']

@@ -216,6 +216,95 @@ def readid(id_ruangan):
     return jsonify({"message": "OK", "datas": results}), 200
 
 
+@barang_dlm_ruangan_endpoints.route('/readByUser/<id_pengguna>', methods=['GET'])
+def readByUser(id_pengguna):
+    """Routes for module get list of items in rooms owned by a user"""
+    # Ambil parameter page dan search dari query string
+    page = int(request.args.get('page', 1))
+    search = request.args.get('search', '')
+    per_page = 5  # Tetapkan jumlah item per halaman
+
+    # Hitung offset
+    offset = (page - 1) * per_page
+
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    if search:
+        # Jika ada parameter search, tambahkan kondisi WHERE dengan LIKE
+        search_param = f"%{search}%"
+        count_query = """
+            SELECT COUNT(*) AS total 
+            FROM barang_dlm_ruangan bdr
+            INNER JOIN ruangan r ON bdr.id_ruangan = r.id_ruangan 
+            WHERE bdr.nama_barang_dlm_ruangan LIKE %s AND r.id_pengguna = %s
+        """
+        cursor.execute(count_query, (search_param, id_pengguna))
+        total_items = cursor.fetchone()['total']
+        
+        query = """
+            SELECT bdr.*
+            FROM barang_dlm_ruangan bdr
+            INNER JOIN ruangan r ON bdr.id_ruangan = r.id_ruangan
+            WHERE bdr.nama_barang_dlm_ruangan LIKE %s AND r.id_pengguna = %s
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(query, (search_param, id_pengguna, per_page, offset))
+    else:
+        # Jika tidak ada parameter search, ambil semua data
+        count_query = """
+            SELECT COUNT(*) AS total 
+            FROM barang_dlm_ruangan bdr
+            INNER JOIN ruangan r ON bdr.id_ruangan = r.id_ruangan
+            WHERE r.id_pengguna = %s
+        """
+        cursor.execute(count_query, (id_pengguna,))
+        total_items = cursor.fetchone()['total']
+        
+        query = """
+            SELECT bdr.*
+            FROM barang_dlm_ruangan bdr
+            INNER JOIN ruangan r ON bdr.id_ruangan = r.id_ruangan
+            WHERE r.id_pengguna = %s
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(query, (id_pengguna, per_page, offset))
+
+    results = cursor.fetchall()
+    
+    cursor.close()
+    connection.close()
+
+    total_pages = (total_items + per_page - 1) // per_page  # Hitung total halaman
+
+    return jsonify({
+        "message": "OK",
+        "datas": results,
+        "pagination": {
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "current_page": page,
+            "per_page": per_page
+        }
+    }), 200
+
+
+    # # Query to get items in rooms owned by the user
+    # select_query = """
+    # SELECT bdr.*
+    # FROM barang_dlm_ruangan bdr
+    # INNER JOIN ruangan r ON bdr.id_ruangan = r.id_ruangan
+    # WHERE r.id_pengguna = %s
+    # """
+    # cursor.execute(select_query, (id_pengguna,))
+    # results = cursor.fetchall()
+    
+    # cursor.close()  # Close the cursor after query execution
+    # connection.close()
+    
+    # return jsonify({"message": "OK", "datas": results}), 200
+
+
 @barang_dlm_ruangan_endpoints.route('/create', methods=['POST'])
 def create():
     """Routes for module create a book"""
