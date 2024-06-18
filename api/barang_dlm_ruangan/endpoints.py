@@ -378,4 +378,3 @@ def update(id_barang_dlm_ruangan):
 #         uploaded_file.save(file_path)
 #         return jsonify({"message": "ok", "data": "uploaded", "file_path": file_path}), 200
 #     return jsonify({"err_message": "Can't upload data"}), 400
-

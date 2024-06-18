@@ -20,8 +20,133 @@ UPLOAD_FOLDER = "img"
 #     connection.close()
 #     return jsonify({"message": "OK", "datas": results}), 200
 
-@barang_dlm_container_endpoints.route('/read', methods=['GET'])
-def read():
+@barang_dlm_container_endpoints.route('/readAll', methods=['GET'])
+def readAll():
+    """Routes for module get list books"""
+    page = int(request.args.get('page', 1))
+    per_page = 5  # Tetapkan jumlah item per halaman
+
+    # Hitung offset
+    offset = (page - 1) * per_page
+
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    query = """
+                 SELECT *
+                 FROM barang_dlm_container
+                 LIMIT %s OFFSET %s
+             """
+    cursor.execute(query, (per_page, offset))
+    results = cursor.fetchall()
+    cursor.close()  # Close the cursor after query execution
+    connection.close()
+    return jsonify({"message": "OK", "datas": results}), 200
+
+@barang_dlm_container_endpoints.route('/readByUserContainer/<id_pengguna>', methods=['GET'])
+def readByUserContainer(id_pengguna):
+    """Routes for module to get list of items in containers owned by a user"""
+    try:
+        # Get page and search parameters from query string
+        page = int(request.args.get('page', 1))
+        search = request.args.get('search', '')
+        per_page = 5  # Set number of items per page
+
+        # Calculate offset
+        offset = (page - 1) * per_page
+
+        print(f"page: {page}, search: {search}, per_page: {per_page}, offset: {offset}")
+
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        if search:
+            # If search parameter is present, add WHERE condition with LIKE
+            search_param = f"%{search}%"
+            count_query = """
+                SELECT COUNT(*) AS total 
+                FROM barang_dlm_container bdc
+                INNER JOIN container c ON bdc.id_container = c.id_container
+                INNER JOIN ruangan r ON c.id_ruangan = r.id_ruangan
+                INNER JOIN pengguna p ON r.id_pengguna = p.id_pengguna
+                WHERE bdc.nama_barang_dlm_container LIKE %s AND p.id_pengguna = %s
+            """
+            print(f"count_query: {count_query}")
+            cursor.execute(count_query, (search_param, id_pengguna))
+            total_items = cursor.fetchone()['total']
+            print(f"total_items with search: {total_items}")
+            
+            query = """
+                SELECT bdc.*
+                FROM barang_dlm_container bdc
+                INNER JOIN container c ON bdc.id_container = c.id_container
+                INNER JOIN ruangan r ON c.id_ruangan = r.id_ruangan
+                INNER JOIN pengguna p ON r.id_pengguna = p.id_pengguna
+                WHERE bdc.nama_barang_dlm_container LIKE %s AND p.id_pengguna = %s
+                LIMIT %s OFFSET %s
+            """
+            print(f"query with search: {query}")
+            cursor.execute(query, (search_param, id_pengguna, per_page, offset))
+        else:
+            # If no search parameter, fetch all data
+            count_query = """
+                SELECT COUNT(*) AS total 
+                FROM barang_dlm_container bdc
+                INNER JOIN container c ON bdc.id_container = c.id_container
+                INNER JOIN ruangan r ON c.id_ruangan = r.id_ruangan
+                INNER JOIN pengguna p ON r.id_pengguna = p.id_pengguna
+                WHERE p.id_pengguna = %s
+            """
+            print(f"count_query: {count_query}")
+            cursor.execute(count_query, (id_pengguna,))
+            total_items = cursor.fetchone()['total']
+            print(f"total_items without search: {total_items}")
+            
+            query = """
+                SELECT bdc.*
+                FROM barang_dlm_container bdc
+                INNER JOIN container c ON bdc.id_container = c.id_container
+                INNER JOIN ruangan r ON c.id_ruangan = r.id_ruangan
+                INNER JOIN pengguna p ON r.id_pengguna = p.id_pengguna
+                WHERE p.id_pengguna = %s
+                LIMIT %s OFFSET %s
+            """
+            print(f"query without search: {query}")
+            cursor.execute(query, (id_pengguna, per_page, offset))
+
+        results = cursor.fetchall()
+        print(f"results: {results}")
+        
+        cursor.close()
+        connection.close()
+
+        total_pages = (total_items + per_page - 1) // per_page  # Calculate total pages
+        print(f"total_pages: {total_pages}")
+
+        return jsonify({
+            "message": "OK",
+            "datas": results,
+            "pagination": {
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "current_page": page,
+                "per_page": per_page
+            }
+        }), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "message": "Failed to fetch data",
+            "error": str(e)
+        }), 500
+
+
+
+
+@barang_dlm_container_endpoints.route('/read', defaults={'id_container': None})
+@barang_dlm_container_endpoints.route('/read/<id_container>', methods=['GET'])
+def read(id_container):
     try:
         # Ambil parameter page dan search dari query string
         page = int(request.args.get('page', 1))
@@ -37,33 +162,65 @@ def read():
         if search:
             # Jika ada parameter search, tambahkan kondisi WHERE dengan LIKE
             search_param = f"%{search}%"
-            count_query = """
-                SELECT COUNT(*) AS total 
-                FROM barang_dlm_container 
-                WHERE nama_barang_dlm_container LIKE %s
-            """
-            cursor.execute(count_query, (search_param,))
+            if id_container:
+                count_query = """
+                    SELECT COUNT(*) AS total 
+                    FROM barang_dlm_container
+                    WHERE nama_barang_dlm_container LIKE %s AND id_container = %s
+                """
+                cursor.execute(count_query, (search_param, id_container))
+            else:
+                count_query = """
+                    SELECT COUNT(*) AS total 
+                    FROM barang_dlm_container
+                    WHERE nama_barang_dlm_container LIKE %s
+                """
+                cursor.execute(count_query, (search_param,))
+            
             total_items = cursor.fetchone()['total']
 
-            query = """
-                SELECT *
-                FROM barang_dlm_container
-                WHERE nama_barang_dlm_container LIKE %s
-                LIMIT %s OFFSET %s
-            """
-            cursor.execute(query, (search_param, per_page, offset))
+            if id_container:
+                query = """
+                    SELECT *
+                    FROM barang_dlm_container
+                    WHERE nama_barang_dlm_container LIKE %s AND id_container = %s
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (search_param, id_container, per_page, offset))
+            else:
+                query = """
+                    SELECT *
+                    FROM barang_dlm_container
+                    WHERE nama_barang_dlm_container LIKE %s
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (search_param, per_page, offset))
         else:
-            # Jika tidak ada parameter search, ambil semua data tanpa kondisi WHERE
-            count_query = "SELECT COUNT(*) AS total FROM barang_dlm_container"
-            cursor.execute(count_query)
+            # Jika tidak ada parameter search, ambil semua data
+            if id_container:
+                count_query = "SELECT COUNT(*) AS total FROM barang_dlm_container WHERE id_container = %s"
+                cursor.execute(count_query, (id_container,))
+            else:
+                count_query = "SELECT COUNT(*) AS total FROM barang_dlm_container"
+                cursor.execute(count_query)
+
             total_items = cursor.fetchone()['total']
 
-            query = """
-                SELECT *
-                FROM barang_dlm_container
-                LIMIT %s OFFSET %s
-            """
-            cursor.execute(query, (per_page, offset))
+            if id_container:
+                query = """
+                    SELECT *
+                    FROM barang_dlm_container
+                    WHERE id_container = %s
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (id_container, per_page, offset))
+            else:
+                query = """
+                    SELECT *
+                    FROM barang_dlm_container
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (per_page, offset))
 
         results = cursor.fetchall()
 
@@ -88,17 +245,18 @@ def read():
             "error": str(e)
         }), 500
 
-@barang_dlm_container_endpoints.route('/read/<id_container>', methods=['GET'])
-def readid(id_container):
-    """Routes for module get list books"""
-    connection = get_connection()
-    cursor = connection.cursor(dictionary=True)
-    select_query = "SELECT * FROM barang_dlm_container WHERE id_container=%s"
-    cursor.execute(select_query, (id_container,))
-    results = cursor.fetchall()
-    cursor.close()  # Close the cursor after query execution
-    connection.close()
-    return jsonify({"message": "OK", "datas": results}), 200
+
+# @barang_dlm_container_endpoints.route('/read/<id_container>', methods=['GET'])
+# def readid(id_container):
+#     """Routes for module get list books"""
+#     connection = get_connection()
+#     cursor = connection.cursor(dictionary=True)
+#     select_query = "SELECT * FROM barang_dlm_container WHERE id_container=%s"
+#     cursor.execute(select_query, (id_container,))
+#     results = cursor.fetchall()
+#     cursor.close()  # Close the cursor after query execution
+#     connection.close()
+#     return jsonify({"message": "OK", "datas": results}), 200
 
 
 @barang_dlm_container_endpoints.route('/create', methods=['POST'])

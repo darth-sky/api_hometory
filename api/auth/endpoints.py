@@ -27,6 +27,7 @@ def login():
     cursor.close()
 
     idUser = user.get('id_pengguna')
+    role = user.get('role')
 
     if not user or not bcrypt.check_password_hash(user.get('kata_sandi'), password):
         return jsonify({"msg": "Bad username or password"}), 401
@@ -35,14 +36,14 @@ def login():
         identity={'username': username}, additional_claims={'roles': user['role']})
     decoded_token = decode_token(access_token)
     expires = decoded_token['exp']
-    return jsonify({"access_token": access_token, "expires_in": expires, "type": "Bearer", "id_pengguna": idUser})
+    return jsonify({"access_token": access_token, "expires_in": expires, "type": "Bearer", "id_pengguna": idUser, "role": role})
 
 
 @auth_endpoints.route('/register', methods=['POST'])
 def register():
     """Routes for register"""
-    username = request.form['username']
-    password = request.form['kata_sandi']
+    username = request.json['username']
+    password = request.json['kata_sandi']
     # To hash a password
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
