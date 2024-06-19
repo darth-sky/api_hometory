@@ -7,6 +7,21 @@ from helper.form_validation import get_form_data
 barang_dlm_ruangan_endpoints = Blueprint('barang_dlm_ruangan', __name__)
 UPLOAD_FOLDER = "img"
 
+@barang_dlm_ruangan_endpoints.route('/readTotalBarang/<id_barang_dlm_ruangan>', methods=['GET'])
+def readLocation(id_barang_dlm_ruangan):
+    """Routes for module get list books"""
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        select_query = "SELECT ruangan.nama_ruangan FROM barang_dlm_ruangan INNER JOIN ruangan ON barang_dlm_ruangan.id_ruangan = ruangan.id_ruangan  WHERE barang_dlm_ruangan.id_barang_dlm_ruangan = %s"
+        select_request = (id_barang_dlm_ruangan,)
+        cursor.execute(select_query, select_request)
+        results = cursor.fetchall()
+    finally:
+        cursor.close()  # Close the cursor after query execution
+        connection.close()
+        return jsonify({"message": "OK", "datas": results}), 200
+
 
 @barang_dlm_ruangan_endpoints.route('/readAll', methods=['GET'])
 def readAll():

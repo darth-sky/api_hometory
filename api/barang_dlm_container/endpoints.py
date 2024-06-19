@@ -7,6 +7,20 @@ from helper.form_validation import get_form_data
 barang_dlm_container_endpoints = Blueprint('barang_dlm_container', __name__)
 UPLOAD_FOLDER = "img"
 
+@barang_dlm_container_endpoints.route('/readTotalBarangContainer/<id_barang_dlm_container>', methods=['GET'])
+def readLocationContianer(id_barang_dlm_container):
+    """Routes for module get list books"""
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        select_query = "SELECT ruangan.nama_ruangan, container.nama_container FROM barang_dlm_container INNER JOIN container ON barang_dlm_container.id_container = container.id_container INNER JOIN ruangan ON ruangan.id_ruangan = container.id_ruangan WHERE barang_dlm_container.id_barang_dlm_container = %s"
+        select_request = (id_barang_dlm_container,)
+        cursor.execute(select_query, select_request)
+        results = cursor.fetchall()
+    finally:
+        cursor.close()  # Close the cursor after query execution
+        connection.close()
+        return jsonify({"message": "OK", "datas": results}), 200
 
 # @barang_dlm_container_endpoints.route('/read', methods=['GET'])
 # def read():
@@ -19,6 +33,22 @@ UPLOAD_FOLDER = "img"
 #     cursor.close()  # Close the cursor after query execution
 #     connection.close()
 #     return jsonify({"message": "OK", "datas": results}), 200
+
+# @barang_dlm_container_endpoints.route('/readTotalBarang/<id_barang_dlm_ruangan>', methods=['GET'])
+# def readLocation(id_barang_dlm_ruangan):
+#     """Routes for module get list books"""
+#     try:
+#         connection = get_connection()
+#         cursor = connection.cursor(dictionary=True)
+#         select_query = "SELECT ruangan.nama_ruangan FROM barang_dlm_ruangan INNER JOIN ruangan ON barang_dlm_ruangan.id_ruangan = ruangan.id_ruangan  WHERE barang_dlm_ruangan.id_barang_dlm_ruangan = 31"
+#         select_request = (id_barang_dlm_ruangan,)
+#         cursor.execute(select_query, select_request)
+#         results = cursor.fetchall()
+#     finally:
+#         cursor.close()  # Close the cursor after query execution
+#         connection.close()
+#         return jsonify({"message": "OK", "datas": results}), 200
+
 
 @barang_dlm_container_endpoints.route('/readAll', methods=['GET'])
 def readAll():
