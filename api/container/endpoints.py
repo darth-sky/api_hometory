@@ -40,22 +40,34 @@ def create():
     id_ruangan = request.form['id_ruangan']
     nama_container = request.form['nama_container']
 
-    uploaded_file = request.files['gambar_container']
-    if uploaded_file.filename != '':
+    uploaded_file = request.files.get('gambar_container')
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        gambar_container = uploaded_file.filename
+    else:
+        gambar_container = 'default.png'  # Use the default image filename
 
-        connection = get_connection()
-        cursor = connection.cursor()
-        insert_query = "INSERT INTO container (id_ruangan, nama_container, gambar_container) VALUES (%s, %s, %s)"
-        request_insert = (id_ruangan, nama_container, uploaded_file.filename)
-        cursor.execute(insert_query, request_insert)
-        connection.commit()  # Commit changes to the database
-        cursor.close()
-        new_id = cursor.lastrowid  # Get the newly inserted book's ID\
-        if new_id:
-            return jsonify({"title": nama_container, "message": "Inserted", "id_container": new_id}), 201
-        return jsonify({"message": "Cant Insert Data"}), 500
+    connection = get_connection()
+    cursor = connection.cursor()
+    insert_query = """
+        INSERT INTO container (id_ruangan, nama_container, gambar_container) 
+        VALUES (%s, %s, %s)
+    """
+    request_insert = (
+        id_ruangan,
+        nama_container,
+        gambar_container
+    )
+    cursor.execute(insert_query, request_insert)
+    connection.commit()  # Commit changes to the database
+    new_id = cursor.lastrowid  # Get the newly inserted container's ID
+    cursor.close()
+
+    if new_id:
+        return jsonify({"title": nama_container, "message": "Inserted", "id_container": new_id}), 201
+    return jsonify({"message": "Can't Insert Data"}), 500
+
 
 
 @container_endpoints.route('/delete/<id_container>', methods=['DELETE'])

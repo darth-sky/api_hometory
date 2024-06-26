@@ -298,22 +298,38 @@ def create():
     qnty_barang_dlm_container = request.form['qnty_barang_dlm_container']
     category_barang_dlm_container = request.form['category_barang_dlm_container']
 
-    uploaded_file = request.files['gambar_barang_dlm_container']
-    if uploaded_file.filename != '':
+    uploaded_file = request.files.get('gambar_barang_dlm_container')
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        gambar_barang_dlm_container = uploaded_file.filename
+    else:
+        gambar_barang_dlm_container = 'default.png'  # Use the default image filename
 
-        connection = get_connection()
-        cursor = connection.cursor()
-        insert_query = "INSERT INTO barang_dlm_container (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, gambar_barang_dlm_container, category_barang_dlm_container) VALUES (%s, %s, %s, %s, %s, %s)"
-        request_insert = (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, uploaded_file.filename, category_barang_dlm_container)
-        cursor.execute(insert_query, request_insert)
-        connection.commit()  # Commit changes to the database
-        cursor.close()
-        new_id = cursor.lastrowid  # Get the newly inserted book's ID\
-        if new_id:
-            return jsonify({"title": nama_barang_dlm_container, "message": "Inserted", "id_barang_dlm_container": new_id}), 201
-        return jsonify({"message": "Cant Insert Data"}), 500
+    connection = get_connection()
+    cursor = connection.cursor()
+    insert_query = """
+        INSERT INTO barang_dlm_container 
+        (id_container, nama_barang_dlm_container, desc_barang_dlm_container, qnty_barang_dlm_container, gambar_barang_dlm_container, category_barang_dlm_container) 
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+    request_insert = (
+        id_container, 
+        nama_barang_dlm_container, 
+        desc_barang_dlm_container, 
+        qnty_barang_dlm_container, 
+        gambar_barang_dlm_container, 
+        category_barang_dlm_container
+    )
+    cursor.execute(insert_query, request_insert)
+    connection.commit()  # Commit changes to the database
+    new_id = cursor.lastrowid  # Get the newly inserted book's ID
+    cursor.close()
+    
+    if new_id:
+        return jsonify({"title": nama_barang_dlm_container, "message": "Inserted", "id_barang_dlm_container": new_id}), 201
+    return jsonify({"message": "Cant Insert Data"}), 500
+
 
 @barang_dlm_container_endpoints.route('/delete/<id_barang_dlm_container>', methods=['DELETE'])
 def delete(id_barang_dlm_container):

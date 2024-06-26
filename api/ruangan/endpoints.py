@@ -22,6 +22,31 @@ def read():
 
 
 
+# @ruangan_endpoints.route('/create', methods=['POST'])
+# def create():
+#     """Routes for module create a book"""
+#     id_pengguna = int(request.form['id_pengguna'])
+#     nama_ruangan = request.form['nama_ruangan']
+#     print(id_pengguna)
+#     print(nama_ruangan)
+
+#     uploaded_file = request.files['gambar_ruangan']
+#     if uploaded_file.filename != '':
+#         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+#         uploaded_file.save(file_path)
+
+#         connection = get_connection()
+#         cursor = connection.cursor()
+#         insert_query = "INSERT INTO ruangan (id_pengguna, nama_ruangan, gambar_ruangan) VALUES (%s, %s, %s)"
+#         request_insert = (id_pengguna, nama_ruangan, uploaded_file.filename)
+#         cursor.execute(insert_query, request_insert)
+#         connection.commit()  # Commit changes to the database
+#         cursor.close()
+#         new_id = cursor.lastrowid  # Get the newly inserted book's ID\
+#         if new_id:
+#             return jsonify({"title": nama_ruangan, "message": "Inserted", "id_ruangan": new_id}), 201
+#         return jsonify({"message": "Cant Insert Data"}), 500
+
 @ruangan_endpoints.route('/create', methods=['POST'])
 def create():
     """Routes for module create a book"""
@@ -30,22 +55,28 @@ def create():
     print(id_pengguna)
     print(nama_ruangan)
 
-    uploaded_file = request.files['gambar_ruangan']
-    if uploaded_file.filename != '':
+    uploaded_file = request.files.get('gambar_ruangan')
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        gambar_ruangan = uploaded_file.filename
+    else:
+        gambar_ruangan = 'default.png'  # Use the default image filename
 
-        connection = get_connection()
-        cursor = connection.cursor()
-        insert_query = "INSERT INTO ruangan (id_pengguna, nama_ruangan, gambar_ruangan) VALUES (%s, %s, %s)"
-        request_insert = (id_pengguna, nama_ruangan, uploaded_file.filename)
-        cursor.execute(insert_query, request_insert)
-        connection.commit()  # Commit changes to the database
-        cursor.close()
-        new_id = cursor.lastrowid  # Get the newly inserted book's ID\
-        if new_id:
-            return jsonify({"title": nama_ruangan, "message": "Inserted", "id_ruangan": new_id}), 201
-        return jsonify({"message": "Cant Insert Data"}), 500
+    connection = get_connection()
+    cursor = connection.cursor()
+    insert_query = "INSERT INTO ruangan (id_pengguna, nama_ruangan, gambar_ruangan) VALUES (%s, %s, %s)"
+    request_insert = (id_pengguna, nama_ruangan, gambar_ruangan)
+    cursor.execute(insert_query, request_insert)
+    connection.commit()  # Commit changes to the database
+    new_id = cursor.lastrowid  # Get the newly inserted book's ID
+    cursor.close()
+    
+    if new_id:
+        return jsonify({"title": nama_ruangan, "message": "Inserted", "id_ruangan": new_id}), 201
+    return jsonify({"message": "Cant Insert Data"}), 500
+
+
 
 
 @ruangan_endpoints.route('/delete/<id_ruangan>', methods=['DELETE'])
@@ -62,26 +93,48 @@ def delete(id_ruangan):
     }), 200
 
 
-@ruangan_endpoints.route('/update/<id_ruangan>', methods=['POST'])
+@ruangan_endpoints.route('/update/<id_ruangan>', methods=['PUT'])
 def update(id_ruangan):
-    """Routes for module update a book"""
-    nama_ruangan = request.form['nama_ruangan']
+    """Routes for module update a room"""
+    connection = get_connection()
+    cursor = connection.cursor()
 
-    uploaded_file = request.files['gambar_ruangan']
-    if uploaded_file.filename != '':
+    # Retrieve the form data
+    nama_ruangan = request.form.get('nama_ruangan')
+    uploaded_file = request.files.get('gambar_ruangan')
+
+    # Prepare the base update query and parameters list
+    update_query = "UPDATE ruangan SET "
+    update_fields = []
+    update_params = []
+
+    # Conditionally add the fields to the update query and parameters
+    if nama_ruangan:
+        update_fields.append("nama_ruangan = %s")
+        update_params.append(nama_ruangan)
+
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        update_fields.append("gambar_ruangan = %s")
+        update_params.append(uploaded_file.filename)
 
-        connection = get_connection()
-        cursor = connection.cursor()
+    # Check if there are fields to update
+    if update_fields:
+        # Join the fields with commas and add the WHERE clause
+        update_query += ", ".join(update_fields) + " WHERE id_ruangan = %s"
+        update_params.append(id_ruangan)
 
-        update_query = "UPDATE ruangan SET nama_ruangan=%s, gambar_ruangan=%s WHERE id_ruangan=%s"
-        update_request = (nama_ruangan, uploaded_file.filename, id_ruangan)
-        cursor.execute(update_query, update_request)
+        # Execute the update query
+        cursor.execute(update_query, tuple(update_params))
         connection.commit()
-        cursor.close()
-        data = {"message": "updated", "id_container": id_ruangan}
-        return jsonify(data), 200
+
+    cursor.close()
+
+    data = {"message": "updated", "id_ruangan": id_ruangan}
+    return jsonify(data), 200
+
+
 
 # @books_endpoints.route("/upload", methods=["POST"])
 # def upload():
