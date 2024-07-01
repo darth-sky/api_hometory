@@ -57,26 +57,73 @@ def readByUserId(id_pengguna):
 
 @pengguna_endpoints.route('/update/<id_pengguna>', methods=['PUT'])
 def update(id_pengguna):
-    """Routes for module update a book"""
-    email = request.form['email']
-    longtitude = request.form['longtitude']
-    latitude = request.form['latitude']
+    """Routes for module update a pengguna"""
+    email = request.form.get('email')
+    longtitude = request.form.get('longtitude')
+    latitude = request.form.get('latitude')
+    uploaded_file = request.files.get('foto_profil')
 
-    uploaded_file = request.files['foto_profil']
-    if uploaded_file.filename != '':
+    # Prepare the fields to be updated
+    fields = []
+    values = []
+
+    if email:
+        fields.append("email = %s")
+        values.append(email)
+
+    if longtitude:
+        fields.append("longtitude = %s")
+        values.append(longtitude)
+
+    if latitude:
+        fields.append("latitude = %s")
+        values.append(latitude)
+
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        fields.append("foto_profil = %s")
+        values.append(uploaded_file.filename)
 
+    # Proceed if there are fields to update
+    if fields:
+        values.append(id_pengguna)
         connection = get_connection()
         cursor = connection.cursor()
 
-        update_query = "UPDATE pengguna SET email=%s, longtitude=%s, latitude=%s, foto_profil=%s where id_pengguna = %s"
-        update_request = (email, longtitude, latitude, uploaded_file.filename, id_pengguna)
-        cursor.execute(update_query, update_request)
+        update_query = f"UPDATE pengguna SET {', '.join(fields)} WHERE id_pengguna = %s"
+        cursor.execute(update_query, values)
         connection.commit()
         cursor.close()
+
         data = {"message": "updated", "id_pengguna": id_pengguna}
         return jsonify(data), 200
+
+    return jsonify({"message": "No fields to update"}), 400
+
+
+# @pengguna_endpoints.route('/update/<id_pengguna>', methods=['PUT'])
+# def update(id_pengguna):
+#     """Routes for module update a book"""
+#     email = request.form['email']
+#     longtitude = request.form['longtitude']
+#     latitude = request.form['latitude']
+
+#     uploaded_file = request.files['foto_profil']
+#     if uploaded_file.filename != '':
+#         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+#         uploaded_file.save(file_path)
+
+#         connection = get_connection()
+#         cursor = connection.cursor()
+
+#         update_query = "UPDATE pengguna SET email=%s, longtitude=%s, latitude=%s, foto_profil=%s where id_pengguna = %s"
+#         update_request = (email, longtitude, latitude, uploaded_file.filename, id_pengguna)
+#         cursor.execute(update_query, update_request)
+#         connection.commit()
+#         cursor.close()
+#         data = {"message": "updated", "id_pengguna": id_pengguna}
+#         return jsonify(data), 200
 
 @pengguna_endpoints.route('/updateRole/<id_pengguna>', methods=['PUT'])
 def updateRole(id_pengguna):

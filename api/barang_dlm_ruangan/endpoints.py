@@ -1,6 +1,7 @@
 """Routes for module books"""
 import os
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required
 from helper.db_helper import get_connection
 from helper.form_validation import get_form_data
 
@@ -321,6 +322,7 @@ def readByUser(id_pengguna):
 
 
 @barang_dlm_ruangan_endpoints.route('/create', methods=['POST'])
+@jwt_required()
 def create():
     """Routes for module create a book"""
     id_ruangan = request.form['id_ruangan']
@@ -363,6 +365,7 @@ def create():
 
 
 @barang_dlm_ruangan_endpoints.route('/delete/<id_barang_dlm_ruangan>', methods=['DELETE'])
+@jwt_required()
 def delete(id_barang_dlm_ruangan):
     connection = get_connection()
     cursor = connection.cursor()
@@ -375,30 +378,82 @@ def delete(id_barang_dlm_ruangan):
         "message": "Deleted"
     }), 200
 
-
-@barang_dlm_ruangan_endpoints.route('/update/<id_barang_dlm_ruangan>', methods=['POST'])
+@barang_dlm_ruangan_endpoints.route('/update/<id_barang_dlm_ruangan>', methods=['PUT'])
+@jwt_required()
 def update(id_barang_dlm_ruangan):
-    """Routes for module update a book"""
-    nama_barang_dlm_ruangan = request.form['nama_barang_dlm_ruangan']
-    desc_barang_dlm_ruangan = request.form['desc_barang_dlm_ruangan']
-    qnty_barang_dlm_ruangan = request.form['qnty_barang_dlm_ruangan']
-    category_barang_dlm_ruangan = request.form['category_barang_dlm_ruangan']
+    """Routes for module update a barang_dlm_ruangan"""
+    nama_barang_dlm_ruangan = request.form.get('nama_barang_dlm_ruangan')
+    desc_barang_dlm_ruangan = request.form.get('desc_barang_dlm_ruangan')
+    qnty_barang_dlm_ruangan = request.form.get('qnty_barang_dlm_ruangan')
+    category_barang_dlm_ruangan = request.form.get('category_barang_dlm_ruangan')
+    uploaded_file = request.files.get('gambar_barang_dlm_ruangan')
 
-    uploaded_file = request.files['gambar_barang_dlm_ruangan']
-    if uploaded_file.filename != '':
+    # Prepare the fields to be updated
+    fields = []
+    values = []
+
+    if nama_barang_dlm_ruangan:
+        fields.append("nama_barang_dlm_ruangan = %s")
+        values.append(nama_barang_dlm_ruangan)
+
+    if desc_barang_dlm_ruangan:
+        fields.append("desc_barang_dlm_ruangan = %s")
+        values.append(desc_barang_dlm_ruangan)
+
+    if qnty_barang_dlm_ruangan:
+        fields.append("qnty_barang_dlm_ruangan = %s")
+        values.append(qnty_barang_dlm_ruangan)
+
+    if category_barang_dlm_ruangan:
+        fields.append("category_barang_dlm_ruangan = %s")
+        values.append(category_barang_dlm_ruangan)
+
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        fields.append("gambar_barang_dlm_ruangan = %s")
+        values.append(uploaded_file.filename)
 
+    # Proceed if there are fields to update
+    if fields:
+        values.append(id_barang_dlm_ruangan)
         connection = get_connection()
         cursor = connection.cursor()
 
-        update_query = "UPDATE barang_dlm_ruangan SET nama_barang_dlm_ruangan=%s, desc_barang_dlm_ruangan=%s, qnty_barang_dlm_ruangan=%s, category_barang_dlm_ruangan=%s, gambar_barang_dlm_ruangan=%s WHERE id_barang_dlm_ruangan=%s"
-        update_request = (nama_barang_dlm_ruangan, desc_barang_dlm_ruangan, qnty_barang_dlm_ruangan, category_barang_dlm_ruangan, uploaded_file.filename, id_barang_dlm_ruangan)
-        cursor.execute(update_query, update_request)
+        update_query = f"UPDATE barang_dlm_ruangan SET {', '.join(fields)} WHERE id_barang_dlm_ruangan = %s"
+        cursor.execute(update_query, values)
         connection.commit()
         cursor.close()
+
         data = {"message": "updated", "id_barang_dlm_ruangan": id_barang_dlm_ruangan}
         return jsonify(data), 200
+
+    return jsonify({"message": "No fields to update"}), 400
+
+
+# @barang_dlm_ruangan_endpoints.route('/update/<id_barang_dlm_ruangan>', methods=['POST'])
+# def update(id_barang_dlm_ruangan):
+#     """Routes for module update a book"""
+#     nama_barang_dlm_ruangan = request.form['nama_barang_dlm_ruangan']
+#     desc_barang_dlm_ruangan = request.form['desc_barang_dlm_ruangan']
+#     qnty_barang_dlm_ruangan = request.form['qnty_barang_dlm_ruangan']
+#     category_barang_dlm_ruangan = request.form['category_barang_dlm_ruangan']
+
+#     uploaded_file = request.files['gambar_barang_dlm_ruangan']
+#     if uploaded_file.filename != '':
+#         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+#         uploaded_file.save(file_path)
+
+#         connection = get_connection()
+#         cursor = connection.cursor()
+
+#         update_query = "UPDATE barang_dlm_ruangan SET nama_barang_dlm_ruangan=%s, desc_barang_dlm_ruangan=%s, qnty_barang_dlm_ruangan=%s, category_barang_dlm_ruangan=%s, gambar_barang_dlm_ruangan=%s WHERE id_barang_dlm_ruangan=%s"
+#         update_request = (nama_barang_dlm_ruangan, desc_barang_dlm_ruangan, qnty_barang_dlm_ruangan, category_barang_dlm_ruangan, uploaded_file.filename, id_barang_dlm_ruangan)
+#         cursor.execute(update_query, update_request)
+#         connection.commit()
+#         cursor.close()
+#         data = {"message": "updated", "id_barang_dlm_ruangan": id_barang_dlm_ruangan}
+#         return jsonify(data), 200
 
 # @books_endpoints.route("/upload", methods=["POST"])
 # def upload():

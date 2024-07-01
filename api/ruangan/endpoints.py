@@ -1,6 +1,7 @@
 """Routes for module books"""
 import os
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required
 from helper.db_helper import get_connection
 from helper.form_validation import get_form_data
 
@@ -9,6 +10,7 @@ UPLOAD_FOLDER = "img"
 
 
 @ruangan_endpoints.route('/read', methods=['GET'])
+@jwt_required()
 def read():
     """Routes for module get list books"""
     connection = get_connection()
@@ -48,6 +50,7 @@ def read():
 #         return jsonify({"message": "Cant Insert Data"}), 500
 
 @ruangan_endpoints.route('/create', methods=['POST'])
+@jwt_required()
 def create():
     """Routes for module create a book"""
     id_pengguna = int(request.form['id_pengguna'])
@@ -80,6 +83,7 @@ def create():
 
 
 @ruangan_endpoints.route('/delete/<id_ruangan>', methods=['DELETE'])
+@jwt_required()
 def delete(id_ruangan):
     connection = get_connection()
     cursor = connection.cursor()
@@ -94,6 +98,7 @@ def delete(id_ruangan):
 
 
 @ruangan_endpoints.route('/update/<id_ruangan>', methods=['PUT'])
+@jwt_required()
 def update(id_ruangan):
     """Routes for module update a room"""
     connection = get_connection()

@@ -1,6 +1,7 @@
 """Routes for module container"""
 import os
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required
 from helper.db_helper import get_connection
 from helper.form_validation import get_form_data
 
@@ -9,6 +10,7 @@ UPLOAD_FOLDER = "img"
 
 
 @container_endpoints.route('/read', methods=['GET'])
+@jwt_required()
 def read():
     """Routes for module get list container"""
     connection = get_connection()
@@ -35,6 +37,7 @@ def readbyid(id_ruangan):
 
 
 @container_endpoints.route('/create', methods=['POST'])
+@jwt_required()
 def create():
     """Routes for module create a book"""
     id_ruangan = request.form['id_ruangan']
@@ -71,6 +74,7 @@ def create():
 
 
 @container_endpoints.route('/delete/<id_container>', methods=['DELETE'])
+@jwt_required()
 def delete(id_container):
     connection = get_connection()
     cursor = connection.cursor()
@@ -84,26 +88,64 @@ def delete(id_container):
     }), 200
 
 
-@container_endpoints.route('/update/<id_container>', methods=['POST'])
-def update(id_container):
-    """Routes for module update a book"""
-    nama_container = request.form['nama_container']
+# @container_endpoints.route('/update/<id_container>', methods=['POST'])
+# def update(id_container):
+#     """Routes for module update a book"""
+#     nama_container = request.form['nama_container']
 
-    uploaded_file = request.files['gambar_container']
-    if uploaded_file.filename != '':
+#     uploaded_file = request.files['gambar_container']
+#     if uploaded_file.filename != '':
+#         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+#         uploaded_file.save(file_path)
+
+#         connection = get_connection()
+#         cursor = connection.cursor()
+
+#         update_query = "UPDATE container SET nama_container=%s, gambar_container=%s WHERE id_container=%s"
+#         update_request = (nama_container, uploaded_file.filename, id_container)
+#         cursor.execute(update_query, update_request)
+#         connection.commit()
+#         cursor.close()
+#         data = {"message": "updated", "id_container": id_container}
+#         return jsonify(data), 200
+
+@container_endpoints.route('/update/<id_container>', methods=['PUT'])
+@jwt_required()
+def update(id_container):
+    """Routes for module update a container"""
+    nama_container = request.form.get('nama_container')
+    uploaded_file = request.files.get('gambar_container')
+    
+    # Prepare the fields to be updated
+    fields = []
+    values = []
+
+    if nama_container:
+        fields.append("nama_container = %s")
+        values.append(nama_container)
+
+    if uploaded_file and uploaded_file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
         uploaded_file.save(file_path)
+        fields.append("gambar_container = %s")
+        values.append(uploaded_file.filename)
 
+    # Proceed if there are fields to update
+    if fields:
+        values.append(id_container)
         connection = get_connection()
         cursor = connection.cursor()
-
-        update_query = "UPDATE container SET nama_container=%s, gambar_container=%s WHERE id_container=%s"
-        update_request = (nama_container, uploaded_file.filename, id_container)
-        cursor.execute(update_query, update_request)
+        
+        update_query = f"UPDATE container SET {', '.join(fields)} WHERE id_container = %s"
+        cursor.execute(update_query, values)
         connection.commit()
         cursor.close()
+
         data = {"message": "updated", "id_container": id_container}
         return jsonify(data), 200
+
+    return jsonify({"message": "No fields to update"}), 400
+
 
 
 # @container_endpoints.route("/upload", methods=["POST"])
